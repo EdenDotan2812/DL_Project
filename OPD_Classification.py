@@ -4,16 +4,19 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import models, transforms
+from torchvision.models import MobileNet_V2_Weights, ResNet50_Weights
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 from sklearn.preprocessing import LabelBinarizer
 import matplotlib.pyplot as plt
+from PIL import Image
 
 
 class CustomDataset(Dataset):
-    def __init__(self, images, labels, transform=None):
+    def __init__(self, images, labels, class_to_idx, transform=None):
         self.images = images
         self.labels = labels
+        self.class_to_idx = class_to_idx
         self.transform = transform
 
     def __len__(self):
@@ -22,8 +25,15 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         image = self.images[idx]
         label = self.labels[idx]
+
+        # Convert the numpy array to a PIL image
+        image = Image.fromarray(image)
+
         if self.transform:
             image = self.transform(image)
+
+        label = torch.tensor(self.class_to_idx[label], dtype=torch.long)
+
         return image, label
 
 
@@ -49,13 +59,23 @@ def split_data(image_arrays, test_size=0.2, val_size=0.2):
 
 def create_model(base_model_name, num_classes):
     if base_model_name == 'mobilenet_v2':
-        base_model = models.mobilenet_v2(pretrained=False)
+        # Load the MobileNet V2 model with default weights
+        weights = MobileNet_V2_Weights.DEFAULT
+        base_model = models.mobilenet_v2(weights=weights)
+        # Modify the first convolutional layer to accept 1 channel instead of 3
+        base_model.features[0][0] = nn.Conv2d(1, base_model.features[0][0].out_channels, kernel_size=3, stride=2, padding=1, bias=False)
         base_model.classifier[1] = nn.Linear(base_model.last_channel, num_classes)
     elif base_model_name == 'resnet50':
-        base_model = models.resnet50(pretrained=False)
+        # Load the ResNet50 model with default weights
+        weights = ResNet50_Weights.DEFAULT
+        base_model = models.resnet50(weights=weights)
+        # Modify the first convolutional layer to accept 1 channel instead of 3
+        base_model.conv1 = nn.Conv2d(1, base_model.conv1.out_channels, kernel_size=7, stride=2, padding=3, bias=False)
         base_model.fc = nn.Linear(base_model.fc.in_features, num_classes)
-    return base_model
+    else:
+        raise ValueError(f"Unsupported base model: {base_model_name}")
 
+    return base_model
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=10):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -157,7 +177,9 @@ def evaluate_model(model, dataloaders, class_names):
 def main():
     # Load the data
     SW620_OPD = np.load('SW620_OPD.npy')
-    SW480_OPD = np.load('SW480_OPD.npy')
+    SW480_OPD_1 = np.load('SW480_OPD_1.npy')
+    SW480_OPD_2 = np.load('SW480_OPD_2.npy')
+    SW480_OPD = np.concatenate((SW480_OPD_1, SW480_OPD_2), axis=0)
     Monocytes_OPD = np.load('MNC_OPD.npy')
     PBMC_OPD = np.load('PBMC_OPD.npy')
     Granulocytes_OPD = np.load('GRC_OPD.npy')
@@ -171,11 +193,14 @@ def main():
         'Granulocytes': Granulocytes_OPD
     }
 
+    # Create a class-to-index mapping
+    class_to_idx = {cls_name: idx for idx, cls_name in enumerate(image_arrays.keys())}
+
     # Split the data
     data_splits = split_data(image_arrays)
 
     # Define the input shape
-    input_shape = (256, 256, 1)
+    input_shape = (256, 256)
 
     # Define the number of classes
     num_classes = len(image_arrays)
@@ -183,7 +208,7 @@ def main():
     # Define the transformations
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((256, 256)),
+        transforms.Resize(input_shape),
         transforms.Normalize([0.5], [0.5])
     ])
 
@@ -196,8 +221,10 @@ def main():
             images.extend(splits[phase])
             labels.extend([class_label] * len(splits[phase]))
 
-        dataset = CustomDataset(np.array(images), np.array(labels), transform=transform)
+        dataset = CustomDataset(images, labels, class_to_idx, transform=transform)
         dataloaders[phase] = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Define the base models
     base_models = ['mobilenet_v2', 'resnet50']
