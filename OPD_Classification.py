@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import models, transforms
+import torch.nn.functional as F
 from torchvision.models import MobileNet_V2_Weights, ResNet50_Weights
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
@@ -57,21 +58,29 @@ def split_data(image_arrays, test_size=0.2, val_size=0.2):
     return data_splits
 
 
-def create_model(base_model_name, num_classes):
+def create_model(base_model_name, num_classes, dropout_prob=0.5):
     if base_model_name == 'mobilenet_v2':
         # Load the MobileNet V2 model with default weights
         weights = MobileNet_V2_Weights.DEFAULT
         base_model = models.mobilenet_v2(weights=weights)
         # Modify the first convolutional layer to accept 1 channel instead of 3
         base_model.features[0][0] = nn.Conv2d(1, base_model.features[0][0].out_channels, kernel_size=3, stride=2, padding=1, bias=False)
-        base_model.classifier[1] = nn.Linear(base_model.last_channel, num_classes)
+        # Modify the classifier to include dropout
+        base_model.classifier = nn.Sequential(
+            nn.Dropout(p=dropout_prob),
+            nn.Linear(base_model.last_channel, num_classes)
+        )
     elif base_model_name == 'resnet50':
         # Load the ResNet50 model with default weights
         weights = ResNet50_Weights.DEFAULT
         base_model = models.resnet50(weights=weights)
         # Modify the first convolutional layer to accept 1 channel instead of 3
         base_model.conv1 = nn.Conv2d(1, base_model.conv1.out_channels, kernel_size=7, stride=2, padding=3, bias=False)
-        base_model.fc = nn.Linear(base_model.fc.in_features, num_classes)
+        # Modify the fully connected layer to include dropout
+        base_model.fc = nn.Sequential(
+            nn.Dropout(p=dropout_prob),
+            nn.Linear(base_model.fc.in_features, num_classes)
+        )
     else:
         raise ValueError(f"Unsupported base model: {base_model_name}")
 
@@ -224,8 +233,6 @@ def main():
         dataset = CustomDataset(images, labels, class_to_idx, transform=transform)
         dataloaders[phase] = DataLoader(dataset, batch_size=32, shuffle=True)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     # Define the base models
     base_models = ['mobilenet_v2', 'resnet50']
 
@@ -234,7 +241,7 @@ def main():
     histories = {}
 
     for model_name in base_models:
-        model = create_model(model_name, num_classes)
+        model = create_model(model_name, num_classes, dropout_prob=0.5)
         optimizer = optim.Adam(model.parameters(), lr=0.001)
         model = train_model(model, dataloaders, criterion, optimizer, num_epochs=10)
         histories[model_name] = model
