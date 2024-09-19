@@ -1,22 +1,20 @@
-Final Project - Deep Learning in medical Imaging course
+Final Project - Deep Learning in Medical Imaging Course
 Classification of Cancer and Blood Cells
 
 Overview
-This project focuses on classifying cancer and blood cells using digital holographic microscopy images. The main objective is to enhance diagnostic accuracy and efficiency through the application of Convolutional Neural Networks to classify optical phase density (OPD) images of cells.
+This project aims to classify cancer and blood cells using digital holographic microscopy images. By applying Convolutional Neural Networks to classify optical phase density (OPD) images, we strive to improve diagnostic accuracy and efficiency in medical imaging.
 
 Project Description
-Circulating tumor cells are crucial biomarkers for cancer diagnosis, prognosis, and treatment monitoring. Detecting these cells in peripheral blood is challenging due to their low abundance and limitations of traditional methods. This project aims to improve the detection and classification of CTCs and various blood cells using deep learning techniques applied to OPD images.
+Circulating tumor cells (CTCs) are vital biomarkers for cancer diagnosis, prognosis, and treatment monitoring. Detecting these rare cells in peripheral blood is challenging due to their low abundance and the limitations of traditional detection methods. This project leverages deep learning techniques to enhance the detection and classification of CTCs and various blood cells using OPD images obtained through digital holographic microscopy.
 
 Key Features
-Classification of Six Cell Types: The dataset includes 2,000 OPD maps representing two types of colorectal cancer cells (SW480 and SW620) and four types of blood cells (Granulocytes, Lymphocytes, Monocytes, and Erythrocytes).
-Deep Learning Models: Implementation and comparison of different CNN architectures, MobilenetV2, resnet50, vgg16, Dinov2 and pre-trained MobilenetV2 on OPD images.
-
+Classification of 5 Cell Types: The dataset includes 2,000 OPD maps representing two colorectal cancer cell lines (SW480 and SW620) and three types of blood cells (Granulocytes, Monocytes, and PBMCs).
+Deep Learning Models: Implementation and comparison of various CNN architectures, including MobileNetV2, ResNet50, VGG16, DinoV2, and a pre-trained MobileNetV2 optimized for OPD images.
 Repository Structure
-dataset_invariant_sw.py: Script for loading and processing the cell image dataset.
-utils_invariant.py: Contains utility functions for data processing, visualization, and performance metrics.
-train.py: Main script to train and evaluate different CNN models on the dataset.
-models/: Directory containing custom CNN models and pre-trained models used in the project.
-results/: Directory for storing training logs, model checkpoints, and evaluation results.
-
+load_data.py: Script for loading and processing the OPD maps into a structured dataset.
+Final_Project.ipynb: Code for training and evaluating MobileNetV2, ResNet50, and VGG16 models on the dataset.
+OPD_Model_and_DinoV2.ipynb: Code for training and evaluating DinoV2 and the pre-trained MobileNetV2 models on OPD images for different classification tasks.
+saved_models/: Directory containing the trained models used for evaluation.
+results/: Directory for storing evaluation plots and results.
 Results
-The best-performing model achieved over 95% accuracy in classifying cancer and blood cells based on their OPD profiles. This demonstrates the potential of using deep learning and label-free imaging for non-invasive cancer diagnostics.
+The best-performing model achieved over 95% accuracy in classifying cancer and blood cells based on their OPD profiles. This demonstrates the effectiveness of combining deep learning with label-free imaging for non-invasive cancer diagnostics.
