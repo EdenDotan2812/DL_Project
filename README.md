@@ -25,3 +25,6 @@ results/: Directory for storing evaluation plots and results.
 
 **Results**
 The best-performing model achieved over 95% accuracy in classifying cancer and blood cells based on their OPD profiles. This demonstrates the effectiveness of combining deep learning with label-free imaging for non-invasive cancer diagnostics.
+
+**Note:** We identified an issue where the confusion matrix indices were incorrect during the initial plotting. This has been fixed and we re-plotted the confusion matrices separately at the end of the code.
+
